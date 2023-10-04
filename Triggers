@@ -1,0 +1,43 @@
+CREATE TABLE Clientes (
+    ClienteID INT PRIMARY KEY,
+    Nombre VARCHAR(50),
+    PuntosLealtad INT
+);
+
+CREATE TABLE Compras (
+    CompraID INT PRIMARY KEY,
+    ClienteID INT,
+    Monto DECIMAL(10, 2)
+);
+
+CREATE TRIGGER ActualizarPuntosLealtad
+ON Compras
+AFTER INSERT
+AS
+BEGIN
+    DECLARE @ClienteID INT;
+    DECLARE @TotalCompra DECIMAL(10, 2);
+    DECLARE @PuntosPorCompra INT;
+
+	SELECT @ClienteID = i.ClienteID,
+           @TotalCompra = SUM(i.Monto)
+    FROM inserted i
+    WHERE i.CompraID = (SELECT MAX(CompraID) FROM inserted WHERE ClienteID = i.ClienteID)
+    GROUP BY i.ClienteID;
+
+	SET @PuntosPorCompra = CAST(@TotalCompra / 10 AS INT);
+
+	UPDATE Clientes
+    SET PuntosLealtad = PuntosLealtad + @PuntosPorCompra
+    WHERE ClienteID = @ClienteID;
+END;
+
+INSERT INTO Clientes (ClienteID, Nombre, PuntosLealtad)
+VALUES (1, 'Ejemplo Cliente', 0);
+
+SELECT * FROM Clientes;
+
+INSERT INTO Compras (CompraID, ClienteID, Monto)
+VALUES (1, 1, 50.00);
+
+SELECT * FROM Clientes;
